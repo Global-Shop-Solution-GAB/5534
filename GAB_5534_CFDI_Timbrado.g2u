@@ -1,0 +1,94 @@
+Program.Sub.ScreenSU.Start
+Gui.F_Timbrado..Create
+Gui.F_Timbrado..Caption("Anular Timbrado")
+Gui.F_Timbrado..Size(6240,3000)
+Gui.F_Timbrado..MinX(0)
+Gui.F_Timbrado..MinY(0)
+Gui.F_Timbrado..Position(0,0)
+Gui.F_Timbrado..BackColor(-2147483633)
+Gui.F_Timbrado..MousePointer(0)
+Gui.F_Timbrado..Event(UnLoad,F_Timbrado_UnLoad)
+Gui.F_Timbrado.lbl1.Create(Label,"Selecciona Factura:",True,2115,525,0,1515,360,True,0,"Arial",10,-2147483633,0)
+Gui.F_Timbrado.txtInvoice.Create(TextBox,"",True,1440,390,0,2175,870,True,0,"Arial",12,-2147483643,1)
+Gui.F_Timbrado.txtInvoice.Locked(True)
+Gui.F_Timbrado.cmdNoTimbre.Create(Button)
+Gui.F_Timbrado.cmdNoTimbre.Size(2145,495)
+Gui.F_Timbrado.cmdNoTimbre.Position(870,1425)
+Gui.F_Timbrado.cmdNoTimbre.Caption("Anular Timbrado")
+Gui.F_Timbrado.cmdNoTimbre.FontSize(10)
+Gui.F_Timbrado.cmdNoTimbre.DefaultValue("")
+Gui.F_Timbrado.cmdNoTimbre.Event(Click,cmdNoTimbre_Click)
+Gui.F_Timbrado.cmdTimbrar.Create(Button)
+Gui.F_Timbrado.cmdTimbrar.Size(2145,495)
+Gui.F_Timbrado.cmdTimbrar.Position(3165,1425)
+Gui.F_Timbrado.cmdTimbrar.Caption("Cancelar Anulacion")
+Gui.F_Timbrado.cmdTimbrar.FontSize(10)
+Gui.F_Timbrado.cmdTimbrar.Event(Click,cmdTimbrar_Click)
+Gui.F_Timbrado.cmdInvoice.Create(Button)
+Gui.F_Timbrado.cmdInvoice.Size(360,375)
+Gui.F_Timbrado.cmdInvoice.Position(3600,345)
+Gui.F_Timbrado.cmdInvoice.Caption("^")
+Gui.F_Timbrado.cmdInvoice.Event(Click,cmdInvoice_Click)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.ODBC.Connection!CONX.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass)
+
+Gui.F_Timbrado..Show
+
+Program.Sub.Main.End
+
+Program.Sub.cmdInvoice_Click.Start
+V.Global.sInvoice.Declare(String)
+V.Local.sRet.Declare(String)
+v.Local.sSQL.Declare(String)
+v.Local.sTitles.Declare(string)
+v.Local.iWidths.Declare(long)
+
+F.Intrinsic.String.Split("FACTURA*!*NUM DE ORDEN*!*CLIENTE",*!*,v.Local.sTitles)
+F.Intrinsic.String.Split("300*!*300*!*800",*!*,v.Local.iWidths)
+F.Intrinsic.UI.SetBrowserHotTypeAhead(True)
+F.Intrinsic.UI.Browser("SELECT * from ORDER_HIST_HEAD", "CONX","SELECT INVOICE, ORDER_NO, NAME_CUSTOMER from ORDER_HIST_HEAD",V.Local.sTitles,V.Local.iWidths,V.Local.sRet)
+F.Intrinsic.Control.If(V.Local.sRet,"=","***CANCEL***")
+ F.Intrinsic.Control.Else
+ 	F.Intrinsic.String.Split(V.Local.sRet,"*!*",V.Local.sRet)
+	Gui.F_Timbrado.txtInvoice.Text(V.Local.sRet(0).Trim)
+	V.Global.sInvoice.Set(V.Local.sRet(0).Trim)
+	
+F.Intrinsic.Control.EndIf
+Program.Sub.cmdInvoice_Click.End
+
+Program.Sub.cmdTimbrar_Click.Start
+'delete from "facturas" where INVOICE = 000015
+V.Local.sSQL.Declare(string)
+V.Local.sRet.Declare(String)
+	F.Intrinsic.String.Build("DELETE FROM FACTURAS WHERE INVOICE = '{0}'",V.Global.sInvoice,V.Local.sSQL)
+	F.ODBC.Connection!conx.Execute(V.Local.sSQL)
+	F.Intrinsic.UI.Msgbox("FACTURA PROXIMA A TIMBRAR" )
+
+Program.Sub.cmdTimbrar_Click.End
+
+Program.Sub.cmdNoTimbre_Click.Start
+'INSERT into "FACTURAS" VALUES (V.Global.sInvoice, 0, 0, CURRENT_DATE(), 0)
+V.Local.sSQL.Declare(string)
+F.Intrinsic.String.Build("SELECT * FROM FACTURAS where INVOICE = '{0}'",V.Global.sInvoice,V.Local.sSQL)
+F.ODBC.Connection!CONX.OpenLocalRecordsetRW("RSTCO",V.Local.sSQL)
+F.Intrinsic.Control.If(v.ODBC.CONX!RSTCO.EOF,=,True)
+	F.ODBC.CONX!RSTCO.AddNew
+	F.ODBC.CONX!RSTCO.Set!INVOICE(V.Global.sInvoice)
+f.Intrinsic.Control.EndIf
+F.ODBC.CONX!RSTCO.Set!XML_URL("CANCELADA")
+F.ODBC.CONX!RSTCO.Set!PDF_URL("CANCELADA")
+F.ODBC.CONX!RSTCO.Update
+F.Intrinsic.UI.Msgbox("FACTURA CANCELADA" )
+F.ODBC.CONX!RSTCO.Close
+
+Program.Sub.cmdNoTimbre_Click.End
+
+Program.Sub.F_Timbrado_UnLoad.Start
+F.ODBC.Connection!CONX.Close
+F.Intrinsic.Control.End
+Program.Sub.F_Timbrado_UnLoad.End
